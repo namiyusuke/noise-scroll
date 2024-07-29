@@ -20,6 +20,8 @@ class CanvasBase {
     this.objects = [];
     this.global = {};
     this.raycaster = new THREE.Raycaster();
+    this.clock = new THREE.Clock();
+    this.delta = 0;
     this.loadTex = new THREE.TextureLoader();
     this.canvas = document.querySelector("#canvas");
     this.canvasRect = this.canvas.getBoundingClientRect();
@@ -58,6 +60,7 @@ class CanvasBase {
         uniforms: {
           uTime: { value: 0 },
           uHover: { value: 0 },
+
           // uTex: { value: tex1 },
         },
         vertexShader: `
@@ -89,9 +92,11 @@ class CanvasBase {
         float intensity =sin(3.14159 * uHover);
         float distortion = noise(vUv * 10.0) * 1.*intensity;
         vec2 distortedUV = vec2(vUv.x  , vUv.y +  distortion *.3 );
-        vec4 color1 = texture2D(tex1, distortedUV);
-        vec4 color2 = texture2D(tex2, distortedUV);
-        gl_FragColor = mix(color1, color2, uHover);
+        vec4 color1 = texture2D(tex1,distortedUV);
+        vec4 color2 = texture2D(tex2,distortedUV);
+        // vec4 color2 = texture2D(tex2,vec2(abs(.01 * uTime),vUv.y));
+        // gl_FragColor = mix(color2, color1 , step(vUv.x,uHover) );
+         gl_FragColor = mix(color2, color1 , uHover );
           //  gl_FragColor = texture2D(tex1, vUv);
         }
         `,
@@ -109,6 +114,7 @@ class CanvasBase {
         geometry,
         rect,
         target,
+        material,
       };
       mesh.position.x = x;
       mesh.position.y = y;
@@ -138,9 +144,9 @@ class CanvasBase {
         // 交差検知をしたもののなかで、isIntersectingがtrueのDOMを色を変える関数に渡す
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            gsap.to(material.uniforms.uHover, { value: 1 });
+            gsap.to(material.uniforms.uHover, { value: 1, duration: 1 });
           } else {
-            gsap.to(material.uniforms.uHover, { value: 0 });
+            gsap.to(material.uniforms.uHover, { value: 0, duration: 1 });
           }
         });
       }
@@ -200,9 +206,12 @@ class CanvasBase {
 
   render() {
     requestAnimationFrame(this.render);
+    this.delta = this.clock.getElapsedTime();
     this.objects.forEach((object) => {
       this.updateScroll(object);
+      object.material.uniforms.uTime.value = this.delta;
     });
+
     this.global.renderer.render(this.global.renderer.scene, this.global.renderer.camera);
   }
 }
